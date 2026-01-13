@@ -19,14 +19,18 @@ const generateToken = (res, userId) => {
     path: '/', // Cookie available to all routes
   };
 
-  // In development, use permissive settings
-  if (ENV.NODE_ENV === 'development') {
-    cookieOptions.sameSite = 'lax'; // Allow cross-origin in dev
-    cookieOptions.secure = false; // Allow HTTP in dev
-  } else {
+  // Detect production: check if CLIENT_URL is not localhost (production deployment)
+  const isProduction = ENV.NODE_ENV === 'production' || 
+                       (ENV.CLIENT_URL && !ENV.CLIENT_URL.includes('localhost'));
+
+  if (isProduction) {
     // In production, use 'none' for cross-origin cookies (Vercel + Render)
     cookieOptions.sameSite = 'none'; // Required for cross-origin cookies
     cookieOptions.secure = true; // Required when sameSite is 'none' (HTTPS only)
+  } else {
+    // In development, use permissive settings
+    cookieOptions.sameSite = 'lax'; // Allow cross-origin in dev
+    cookieOptions.secure = false; // Allow HTTP in dev
   }
 
   // Set cookie

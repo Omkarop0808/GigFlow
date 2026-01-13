@@ -1,5 +1,6 @@
 import User from '../models/user.model.js';
 import generateToken from '../utils/generateToken.js';
+import { ENV } from '../config/env.js';
 
 // create user 
 export const registerUser = async (req, res) => {
@@ -86,8 +87,12 @@ export const logoutUser = async (req, res) => {
     path: '/',
   };
 
+  // Detect production: check if CLIENT_URL is not localhost (production deployment)
+  const isProduction = ENV.NODE_ENV === 'production' || 
+                       (ENV.CLIENT_URL && !ENV.CLIENT_URL.includes('localhost'));
+
   // Match production cookie settings for cross-origin
-  if (process.env.NODE_ENV === 'production') {
+  if (isProduction) {
     cookieOptions.sameSite = 'none';
     cookieOptions.secure = true;
   } else {

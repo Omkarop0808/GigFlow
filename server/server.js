@@ -24,8 +24,9 @@ const io = new Server(httpServer, {
 app.use(cors({
     origin: ENV.CLIENT_URL,
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    exposedHeaders: ['Set-Cookie'],
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -34,6 +35,17 @@ app.use(cookieParser());
 
 app.get("/", (req, res) => {
     res.send("Hello from Gigflow Backend Server");
+});
+
+// Test endpoint to check cookies
+app.get("/api/test-cookies", (req, res) => {
+    console.log('🍪 Test Cookies - Received cookies:', req.cookies);
+    console.log('🍪 Test Cookies - Cookie header:', req.headers.cookie);
+    res.json({
+        cookies: req.cookies,
+        cookieHeader: req.headers.cookie,
+        message: 'Cookie test endpoint'
+    });
 });
 
 app.use('/api/auth', authRoutes);

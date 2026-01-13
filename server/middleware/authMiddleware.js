@@ -7,6 +7,14 @@ import { ENV } from '../config/env.js';
 export const protect = async (req, res, next) => {
   let token;
 
+  // Debug: Log cookie information
+  console.log('🔍 Auth Middleware Debug:', {
+    cookies: req.cookies,
+    cookieHeader: req.headers.cookie,
+    origin: req.headers.origin,
+    referer: req.headers.referer,
+  });
+
   // Read JWT from cookie
   token = req.cookies.jwt;
 
