@@ -15,7 +15,7 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     if (import.meta.env.DEV) {
-      console.log('🚀 API Request:', {
+      console.log(' API Request:', {
         method: config.method?.toUpperCase(),
         url: config.url,
       });

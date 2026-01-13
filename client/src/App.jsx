@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { authAPI } from './services/api';
@@ -7,6 +7,7 @@ import io from 'socket.io-client';
 
 // Components
 import Navbar from './components/common/Navbar';
+import Toast from './components/common/toast';
 
 // Pages
 import Login from './pages/Auth/Login';
@@ -27,13 +28,15 @@ function App() {
   const { isAuthenticated, user } = useSelector((state) => state.auth);
   const socketRef = useRef(null);
   const hasCheckedAuth = useRef(false);
+  const [toast, setToast] = useState(null);
 
   // Initialize Socket.io connection when user logs in
   useEffect(() => {
     if (isAuthenticated && user) {
       // Connect to Socket.io server
-      const baseURL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
-      console.log(`🔌 Connecting to Socket.io at ${baseURL}`);
+      const baseURL =
+        import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+      console.log(` Connecting to Socket.io at ${baseURL}`);
       
       socketRef.current = io(baseURL, {
         auth: {
@@ -52,21 +55,41 @@ function App() {
         socketRef.current.emit('join', user._id);
       });
 
+      // Listen for "hired" notification events from server
+      socketRef.current.on('hired', (data) => {
+        console.log('📥 Hired notification received:', data);
+        setToast({
+          message: data?.message || 'You have been hired for a gig!',
+          type: 'success',
+        });
+      });
+
+      // Listen for "bid_rejected" notification events from server
+      socketRef.current.on('bid_rejected', (data) => {
+        console.log('📥 Bid rejected notification received:', data);
+        setToast({
+          message: data?.message || 'Your bid was not selected.',
+          type: 'warning',
+        });
+      });
+
       socketRef.current.on('disconnect', (reason) => {
         console.log('✗ Socket.io disconnected:', reason);
       });
 
       socketRef.current.on('connect_error', (error) => {
-        console.error('❌ Socket.io connection error:', error);
+        console.error(' Socket.io connection error:', error);
       });
 
       socketRef.current.on('error', (error) => {
-        console.error('❌ Socket.io error:', error);
+        console.error(' Socket.io error:', error);
       });
 
       // Cleanup on unmount
       return () => {
         if (socketRef.current) {
+          socketRef.current.off('hired');
+          socketRef.current.off('bid_rejected');
           socketRef.current.disconnect();
         }
       };
@@ -94,6 +117,13 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
       <Navbar />
       
       <Routes>
@@ -107,7 +137,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
-        {/* Protected Routes */}
+
         <Route
           path="/feed"
           element={

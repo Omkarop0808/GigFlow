@@ -1,6 +1,8 @@
 import Bid from '../models/bid.model.js';
 import Gig from '../models/gig.model.js';
 import mongoose from 'mongoose';
+import { io } from '../server.js';
+
 
 //    Create a new bid for a gig
 export const createBid = async (req, res) => {
@@ -191,10 +193,36 @@ export const hireBid = async (req, res) => {
     await session.commitTransaction();
     session.endSession();
 
-    // Fetch updated bid with populated data
+    // Fetch updated bid with populated data (the hired one)
     const updatedBid = await Bid.findById(bid._id)
       .populate('freelancer', 'name email')
       .populate('gig', 'title budget');
+    
+    console.log("UPDATED BID FREELANCER:", updatedBid.freelancer);
+
+    // Notify the hired freelancer
+    io.to(`user:${updatedBid.freelancer._id}`).emit('hired', {
+      message: `You have been hired for "${updatedBid.gig.title}"`,
+      gigId: updatedBid.gig._id,
+      bidId: updatedBid._id,
+    });
+
+    // Notify all rejected bidders for this gig
+    const rejectedBids = await Bid.find({
+      gig: updatedBid.gig._id,
+      _id: { $ne: updatedBid._id },
+      status: 'rejected',
+    }).populate('freelancer', 'name email');
+
+    rejectedBids.forEach((rejectedBid) => {
+      if (!rejectedBid.freelancer?._id) return;
+
+      io.to(`user:${rejectedBid.freelancer._id}`).emit('bid_rejected', {
+        message: `Your bid for "${updatedBid.gig.title}" was not selected.`,
+        gigId: updatedBid.gig._id,
+        bidId: rejectedBid._id,
+      });
+    });
 
     res.json({
       message: 'Freelancer hired successfully',
