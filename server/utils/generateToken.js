@@ -24,9 +24,9 @@ const generateToken = (res, userId) => {
     cookieOptions.sameSite = 'lax'; // Allow cross-origin in dev
     cookieOptions.secure = false; // Allow HTTP in dev
   } else {
-    // In production, use strict security
-    cookieOptions.sameSite = 'strict';
-    cookieOptions.secure = true; // HTTPS only
+    // In production, use 'none' for cross-origin cookies (Vercel + Render)
+    cookieOptions.sameSite = 'none'; // Required for cross-origin cookies
+    cookieOptions.secure = true; // Required when sameSite is 'none' (HTTPS only)
   }
 
   // Set cookie

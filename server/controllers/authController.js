@@ -80,10 +80,22 @@ export const loginUser = async (req, res) => {
 
 // logout user
 export const logoutUser = async (req, res) => {
-  res.cookie('jwt', '', {
+  const cookieOptions = {
     httpOnly: true,
     expires: new Date(0),
-  });
+    path: '/',
+  };
+
+  // Match production cookie settings for cross-origin
+  if (process.env.NODE_ENV === 'production') {
+    cookieOptions.sameSite = 'none';
+    cookieOptions.secure = true;
+  } else {
+    cookieOptions.sameSite = 'lax';
+    cookieOptions.secure = false;
+  }
+
+  res.cookie('jwt', '', cookieOptions);
 
   res.status(200).json({ message: 'Logged out successfully' });
 };
