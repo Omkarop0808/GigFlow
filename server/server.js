@@ -12,9 +12,29 @@ import bidRoutes from './routes/bidRoutes.js';
 
 const app= express();
 const httpServer = createServer(app);
+
+// CORS origin function - accepts Vercel production and preview URLs
+const corsOrigin = (origin, callback) => {
+  // Allow requests with no origin (mobile apps, Postman, etc.)
+  if (!origin) return callback(null, true);
+  
+  // Check if origin matches the configured CLIENT_URL
+  if (origin === ENV.CLIENT_URL) {
+    return callback(null, true);
+  }
+  
+  // Allow Vercel preview URLs (pattern: https://*.vercel.app)
+  if (origin.includes('.vercel.app')) {
+    return callback(null, true);
+  }
+  
+  // Reject other origins
+  callback(new Error('Not allowed by CORS'));
+};
+
 const io = new Server(httpServer, {
     cors: {
-        origin: ENV.CLIENT_URL,
+        origin: corsOrigin,
         methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
         credentials: true,
     },
@@ -22,7 +42,7 @@ const io = new Server(httpServer, {
 });
 
 app.use(cors({
-    origin: ENV.CLIENT_URL,
+    origin: corsOrigin,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
