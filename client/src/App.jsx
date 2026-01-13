@@ -34,9 +34,14 @@ function App() {
   useEffect(() => {
     if (isAuthenticated && user) {
       // Connect to Socket.io server
-      const baseURL =
-        import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
-      console.log(` Connecting to Socket.io at ${baseURL}`);
+      let baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+      // Remove /api suffix if present for Socket.IO connection
+      if (baseURL.endsWith('/api')) {
+        baseURL = baseURL.replace('/api', '');
+      }
+      // Remove trailing slash
+      baseURL = baseURL.replace(/\/$/, '');
+      console.log(`🔌 Connecting to Socket.io at ${baseURL}`);
       
       socketRef.current = io(baseURL, {
         auth: {
