@@ -7,16 +7,27 @@ import { ENV } from '../config/env.js';
 export const protect = async (req, res, next) => {
   let token;
 
-  // Debug: Log cookie information
-  console.log('🔍 Auth Middleware Debug:', {
-    cookies: req.cookies,
-    cookieHeader: req.headers.cookie,
-    origin: req.headers.origin,
-    referer: req.headers.referer,
-  });
-
   // Read JWT from cookie
   token = req.cookies.jwt;
+
+  // If no token in cookies, try reading from cookie header directly
+  if (!token && req.headers.cookie) {
+    const cookies = req.headers.cookie.split(';').reduce((acc, cookie) => {
+      const [key, value] = cookie.trim().split('=');
+      acc[key] = value;
+      return acc;
+    }, {});
+    token = cookies.jwt;
+  }
+
+  // Debug log only if token is missing (to help troubleshoot)
+  if (!token) {
+    console.log('⚠️ No token found:', {
+      cookies: req.cookies,
+      cookieHeader: req.headers.cookie,
+      origin: req.headers.origin,
+    });
+  }
 
   if (token) {
     try {

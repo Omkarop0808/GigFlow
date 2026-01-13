@@ -17,6 +17,7 @@ const generateToken = (res, userId) => {
     httpOnly: true, // Cannot be accessed via JavaScript (XSS protection)
     maxAge: parseInt(ENV.COOKIE_EXPIRE) * 24 * 60 * 60 * 1000, // 7 days in ms
     path: '/', // Cookie available to all routes
+    // DO NOT set domain - let browser handle it for cross-origin
   };
 
   // Detect production: check if CLIENT_URL is not localhost (production deployment)
@@ -41,6 +42,7 @@ const generateToken = (res, userId) => {
     sameSite: cookieOptions.sameSite,
     secure: cookieOptions.secure,
     maxAge: cookieOptions.maxAge,
+    path: cookieOptions.path,
   });
 
   return token;
