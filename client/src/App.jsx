@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { authAPI } from './services/api';
+import { authAPI, bidAPI } from './services/api';
 import { loginSuccess, logout } from './store/authSlice';
 import io from 'socket.io-client';
 
@@ -29,6 +29,10 @@ function App() {
   const socketRef = useRef(null);
   const hasCheckedAuth = useRef(false);
   const [toast, setToast] = useState(null);
+
+  const showToast = (message, type = 'info') => {
+    setToast({ message, type });
+  };
 
   // Initialize Socket.io connection when user logs in
   useEffect(() => {
@@ -63,19 +67,13 @@ function App() {
       // Listen for "hired" notification events from server
       socketRef.current.on('hired', (data) => {
         console.log('📥 Hired notification received:', data);
-        setToast({
-          message: data?.message || 'You have been hired for a gig!',
-          type: 'success',
-        });
+        showToast(data?.message || 'You have been hired for a gig!', 'success');
       });
 
       // Listen for "bid_rejected" notification events from server
       socketRef.current.on('bid_rejected', (data) => {
         console.log('📥 Bid rejected notification received:', data);
-        setToast({
-          message: data?.message || 'Your bid was not selected.',
-          type: 'warning',
-        });
+        showToast(data?.message || 'Your bid was not selected.', 'warning');
       });
 
       socketRef.current.on('disconnect', (reason) => {
@@ -100,6 +98,45 @@ function App() {
       };
     }
   }, [isAuthenticated, user]);
+
+  // Show missed notifications on login (if user was offline when hired/rejected)
+  useEffect(() => {
+    const checkMissedNotifications = async () => {
+      try {
+        const res = await bidAPI.getMyBids();
+        const bids = Array.isArray(res.data) ? res.data : [];
+
+        const storageKey = `gigflow:seenBidStatus:${user?._id}`;
+        const seen = new Set(JSON.parse(localStorage.getItem(storageKey) || '[]'));
+
+        // Only notify for non-pending bids that we haven't seen before
+        const unseen = bids
+          .filter((b) => b && b._id && b.status && b.status !== 'pending')
+          .filter((b) => !seen.has(`${b._id}:${b.status}`))
+          // newest first
+          .sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
+
+        // Show at most 1 toast to avoid spam on login
+        if (unseen.length > 0) {
+          const b = unseen[0];
+          if (b.status === 'hired') {
+            showToast(`You have been hired for "${b.gig?.title || 'a gig'}"`, 'success');
+          } else if (b.status === 'rejected') {
+            showToast(`Your bid for "${b.gig?.title || 'a gig'}" was not selected.`, 'warning');
+          }
+        }
+
+        unseen.forEach((b) => seen.add(`${b._id}:${b.status}`));
+        localStorage.setItem(storageKey, JSON.stringify(Array.from(seen)));
+      } catch {
+        // ignore - auth may not be ready yet
+      }
+    };
+
+    if (isAuthenticated && user?._id) {
+      checkMissedNotifications();
+    }
+  }, [isAuthenticated, user?._id]);
 
   // Check if user is already logged in (on app load only)
   useEffect(() => {
